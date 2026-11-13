@@ -1,5 +1,6 @@
 const MAX_UPLOAD = 6 * 1024 * 1024;
 const AUDIO_TYPES = new Set(['audio/wav', 'audio/mpeg', 'audio/webm', 'audio/mp4', 'audio/ogg']);
+const VOICE_SAMPLE_RATE = 24000;
 
 function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -91,14 +92,105 @@ export async function handleCoach(request, env, admit = async () => true) {
   }
 }
 
-async function admitCloudRequest(request) {
+function dylanWave(chunks, size) {
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+  for (const [offset, word] of [[0, 'RIFF'], [8, 'WAVEfmt '], [36, 'data']]) {
+    for (let i = 0; i < word.length; i++) view.setUint8(offset + i, word.charCodeAt(i));
+  }
+  view.setUint32(4, size + 36, true);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, VOICE_SAMPLE_RATE, true);
+  view.setUint32(28, VOICE_SAMPLE_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  view.setUint32(40, size, true);
+  return new Response(new Blob([header, ...chunks]), {
+    headers: { 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store' }
+  });
+}
+
+async function synthesizeDylan(text, env) {
+  const key = (env.MINGLI_DASHSCOPE_API_KEY || env.DASHSCOPE_API_KEY).trim();
+  const response = await fetch('https://dashscope.aliyuncs.com/api-ws/v1/realtime?model=qwen3-tts-flash-realtime', {
+    headers: { Upgrade: 'websocket', Authorization: 'Bearer ' + key },
+    signal: AbortSignal.timeout(10000)
+  });
+  const socket = response.webSocket;
+  if (!socket) throw new Error('Voice connection failed: ' + response.status);
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let finished = false;
+    const send = (type, fields = {}) => socket.send(JSON.stringify({ event_id: crypto.randomUUID(), type, ...fields }));
+    function settle(error) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      if (socket.readyState === 1) socket.close(1000);
+      if (error || !size) reject(error || new Error('Empty voice response'));
+      else resolve(dylanWave(chunks, size));
+    }
+    const timeout = setTimeout(() => settle(new Error('Voice timeout')), 45000);
+    socket.addEventListener('error', () => settle(new Error('Voice connection interrupted')));
+    socket.addEventListener('close', () => settle(new Error('Voice connection closed')));
+    socket.addEventListener('message', event => {
+      try {
+        const packet = JSON.parse(event.data);
+        if (packet.type === 'session.created') {
+          send('session.update', {
+            session: { voice: 'Dylan', mode: 'commit', language_type: 'Chinese', response_format: 'pcm', sample_rate: VOICE_SAMPLE_RATE }
+          });
+        } else if (packet.type === 'session.updated') {
+          send('input_text_buffer.append', { text });
+          send('input_text_buffer.commit');
+        } else if (packet.type === 'response.audio.delta') {
+          const chunk = Uint8Array.from(atob(packet.delta), character => character.charCodeAt(0));
+          size += chunk.length;
+          if (size > 12 * 1024 * 1024) settle(new Error('Voice output too large'));
+          else chunks.push(chunk);
+        } else if (packet.type === 'session.finished') {
+          settle();
+        } else if (packet.type === 'error' || packet.response?.status === 'failed') {
+          settle(new Error('Voice synthesis rejected: ' + (packet.error?.code || packet.response?.status_details?.error?.code || packet.type)));
+        } else if (packet.type === 'response.done') {
+          send('session.finish');
+        }
+      } catch (error) {
+        settle(error);
+      }
+    });
+    socket.accept();
+  });
+}
+
+async function handleVoice(request, env) {
+  if (request.headers.get('Origin') !== new URL(request.url).origin) return json({ error: '请从本站页面提交。' }, 403);
+  if (!coachReady(env)) return json({ error: '云端朗读尚未配置。' }, 503);
+  const length = Number(request.headers.get('Content-Length'));
+  if (!Number.isInteger(length) || length < 1 || length > 14000) return json({ error: '朗读文本过长或为空。' }, 400);
+  const payload = await request.json().catch(() => null);
+  const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+  if (!text || text.length > 3200) return json({ error: '朗读文本过长或为空。' }, 400);
+  if (!(await admitCloudRequest(request, 'voice', 15000))) return json({ error: '朗读请求较多，稍后可以重试。' }, 429);
+  try {
+    return await synthesizeDylan(text, env);
+  } catch (error) {
+    console.warn('Dylan TTS:', error.message);
+    return json({ error: '晓东音色暂时无法播放，可以重试或切换系统音色。' }, 502);
+  }
+}
+
+async function admitCloudRequest(request, channel = 'coach', duration = 60000) {
   const ip = request.headers.get('CF-Connecting-IP');
   if (!ip || !globalThis.caches?.default) return false;
-  const window = Math.floor(Date.now() / 60000);
-  const key = new Request(`${new URL(request.url).origin}/.coach-rate/${window}/${encodeURIComponent(ip)}`);
+  const window = Math.floor(Date.now() / duration);
+  const key = new Request(`${new URL(request.url).origin}/.coach-rate/${channel}/${window}/${encodeURIComponent(ip)}`);
   const cache = caches.default;
   if (await cache.match(key)) return false;
-  await cache.put(key, new Response('1', { headers: { 'Cache-Control': 'public, max-age=60' } }));
+  await cache.put(key, new Response('1', { headers: { 'Cache-Control': 'public, max-age=' + duration / 1000 } }));
   return true;
 }
 
@@ -107,6 +199,7 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === '/api/coach/status' && request.method === 'GET') return json({ ready: coachReady(env) });
     if (pathname === '/api/coach' && request.method === 'POST') return handleCoach(request, env, () => admitCloudRequest(request));
+    if (pathname === '/api/coach/voice' && request.method === 'POST') return handleVoice(request, env);
     if (pathname.startsWith('/api/') || pathname.startsWith('/_worker.js') || pathname.startsWith('/.coach-rate/')) return json({ error: '找不到页面。' }, 404);
     return env.ASSETS.fetch(request);
   }

@@ -1,5 +1,9 @@
 let coachSession = null;
 let coachMuted = true;
+let coachPlayback = null;
+let coachVoice = 'dylan';
+try { if (localStorage.getItem('mingli-coach-voice') === 'system') coachVoice = 'system'; } catch {}
+const COACH_VOICE_SAMPLE = '你好，我是獬豸。你先说说你的想法，我陪你一起理清楚。';
 
 function xiezhiAssistantMarkup() {
   return `<aside class="xiezhi-coach" data-xiezhi-coach>
@@ -7,6 +11,12 @@ function xiezhiAssistantMarkup() {
     <div class="coach-body" role="region" aria-label="獬豸语音陪练">
       <header><div><p class="training-kicker">先自己想，再一起改</p><h2>请獬豸帮忙</h2></div><div class="coach-header-actions"><button type="button" data-coach-mute aria-pressed="${coachMuted}">${coachMuted ? '已静音' : '朗读开启'}</button><button type="button" data-coach-close aria-label="关闭语音陪练">×</button></div></header>
       <div class="coach-scroll"><p class="coach-intro">查阅后，试着用自己的话讲清词义。也可以直接说出其他问题，獬豸会按你实际说的内容回应。</p>
+        <div class="coach-voice-options">
+          <label>朗读音色 <select data-coach-voice><option value="dylan" ${coachVoice === 'dylan' ? 'selected' : ''}>北京-晓东</option><option value="system" ${coachVoice === 'system' ? 'selected' : ''}>系统中文音色</option></select></label>
+          <button type="button" data-coach-sample>试听</button>
+        </div>
+        <audio controls preload="none" data-coach-audio hidden aria-label="獬豸语音"></audio>
+        <p class="coach-voice-status" data-coach-voice-status role="status" hidden></p>
         <div class="coach-output" data-coach-output hidden></div>
         <div class="coach-empty" data-coach-empty><span aria-hidden="true">言</span><b>思考由你开始</b><p>说出你的理解、一个例子，<br>以及它为什么与你有关。</p></div>
       </div>
@@ -23,6 +33,7 @@ function syncXiezhiAssistant() {
   section.querySelector('[data-coach-example]').disabled = Boolean(coachSession);
   const newTerm = section.dataset.term !== state.xiezhi.term;
   if (newTerm) {
+    stopCoachVoice();
     section.dataset.term = state.xiezhi.term;
     section.querySelector('[data-coach-output]').hidden = true;
     section.querySelector('[data-coach-empty]').hidden = false;
@@ -53,7 +64,7 @@ function cancelXiezhiAssistant() {
     releaseCoachMedia(session);
     syncXiezhiAssistant();
   }
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  stopCoachVoice();
 }
 
 async function startXiezhiAssistant() {
@@ -63,6 +74,7 @@ async function startXiezhiAssistant() {
     return;
   }
   const session = { controller: new AbortController(), term: state.xiezhi.term, chunks: [] };
+  stopCoachVoice();
   coachSession = session;
   syncXiezhiAssistant();
   coachStatus('正在检查陪练服务…');
@@ -189,14 +201,72 @@ async function submitXiezhiRecording(session) {
   }
 }
 
-function speakCoachFeedback(output) {
-  if (!('speechSynthesis' in window) || coachMuted || !output) return;
-  speechSynthesis.cancel();
-  const speech = new SpeechSynthesisUtterance(output.dataset.speech);
+function stopCoachVoice() {
+  const playback = coachPlayback;
+  coachPlayback = null;
+  if (playback) {
+    playback.controller.abort();
+    playback.player.pause();
+    playback.player.removeAttribute('src');
+    playback.player.load();
+    playback.player.hidden = true;
+    if (playback.url) URL.revokeObjectURL(playback.url);
+  }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+function coachVoiceStatus(message) {
+  const status = document.querySelector('[data-coach-voice-status]');
+  if (!status) return;
+  status.textContent = message;
+  status.hidden = !message;
+}
+
+async function playCoachVoice(text) {
+  if (!text || coachSession?.recorder?.state === 'recording') return;
+  stopCoachVoice();
+  coachVoiceStatus('');
+  if (coachVoice === 'system') {
+    playCoachSystemVoice(text);
+    return;
+  }
+  const playback = { controller: new AbortController(), player: document.querySelector('[data-coach-audio]') };
+  coachPlayback = playback;
+  coachVoiceStatus('晓东正在准备语音…');
+  try {
+    const response = await fetch('/api/coach/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: playback.controller.signal
+    });
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || '晓东音色暂时不可用。');
+    const audio = await response.blob();
+    if (coachPlayback !== playback) return;
+    playback.url = URL.createObjectURL(audio);
+    playback.player.src = playback.url;
+    playback.player.hidden = false;
+    coachVoiceStatus('');
+    try {
+      await playback.player.play();
+    } catch {
+      if (coachPlayback === playback) coachVoiceStatus('点播放器上的播放键即可收听。');
+    }
+  } catch (error) {
+    if (coachPlayback === playback) coachVoiceStatus(error.message);
+  }
+}
+
+function playCoachSystemVoice(text) {
+  if (!('speechSynthesis' in window)) {
+    coachVoiceStatus('当前浏览器不支持系统朗读。');
+    return;
+  }
+  const speech = new SpeechSynthesisUtterance(text);
   speech.lang = 'zh-CN';
   const voice = speechSynthesis.getVoices().find(item => item.localService && /^zh(?:[-_]|$)/i.test(item.lang));
   if (!voice) {
-    coachStatus('当前浏览器没有可用的本机中文语音，可以阅读文字反馈。');
+    coachVoiceStatus('当前浏览器没有可用的系统中文音色。');
     return;
   }
   speech.voice = voice;
@@ -215,15 +285,17 @@ function showXiezhiFeedback(result, example) {
     : [['术语与用词', result.wording], ['表达结构', result.structure], ['下一轮怎么练', result.nextStep]];
   output.dataset.speech = result.reply || fields.map(([name, copy]) => name + '。' + copy).join('。');
   output.innerHTML = `<p class="training-kicker">${example ? '演示样例 · 编辑预设' : '獬豸反馈 · AI 生成'}</p><details><summary>查看${example ? '样例' : '语音'}转写</summary><p>${esc(result.transcript)}</p></details><div class="coach-feedback-grid">${fields.map(([name, copy]) => `<div><b>${name}</b><p class="coach-reply-text">${esc(copy)}</p></div>`).join('')}</div><button class="training-secondary" type="button" data-coach-play>朗读回复</button>`;
-  speakCoachFeedback(output);
+  stopCoachVoice();
+  if (!coachMuted) playCoachVoice(output.dataset.speech);
 }
 
 document.addEventListener('click', event => {
   const section = event.target.closest('[data-xiezhi-coach]');
   if (!section) return;
-  if (event.target.closest('[data-coach-open]')) { const dialog=section.querySelector('.coach-dialog'); dialog.append(section.querySelector('.coach-body')); section.classList.add('coach-open'); dialog.onclose=()=>{section.append(dialog.querySelector('.coach-body'));section.classList.remove('coach-open');}; dialog.showModal(); return; }
+  if (event.target.closest('[data-coach-open]')) { const dialog=section.querySelector('.coach-dialog'); dialog.append(section.querySelector('.coach-body')); section.classList.add('coach-open'); dialog.onclose=()=>{stopCoachVoice();coachVoiceStatus('');section.append(dialog.querySelector('.coach-body'));section.classList.remove('coach-open');}; dialog.showModal(); return; }
   if (event.target.closest('[data-coach-close]')) { section.querySelector('.coach-dialog').close(); return; }
   if (event.target.closest('[data-coach-start]')) startXiezhiAssistant();
+  if (event.target.closest('[data-coach-sample]')) playCoachVoice(COACH_VOICE_SAMPLE);
   if (event.target.closest('[data-coach-example]')) {
     coachStatus('展示预设样例。');
     showXiezhiFeedback({
@@ -238,10 +310,22 @@ document.addEventListener('click', event => {
     const button = section.querySelector('[data-coach-mute]');
     button.textContent = coachMuted ? '已静音' : '朗读开启';
     button.setAttribute('aria-pressed', String(coachMuted));
-    if (coachMuted && 'speechSynthesis' in window) speechSynthesis.cancel();
+    if (coachMuted) {
+      stopCoachVoice();
+      coachVoiceStatus('');
+      return;
+    }
     const output = section.querySelector('[data-coach-output]');
-    if (!output.hidden) speakCoachFeedback(output);
+    if (!output.hidden) playCoachVoice(output.dataset.speech);
   }
+});
+
+document.addEventListener('change', event => {
+  if (!event.target.matches('[data-coach-voice]')) return;
+  coachVoice = event.target.value;
+  stopCoachVoice();
+  coachVoiceStatus('');
+  try { localStorage.setItem('mingli-coach-voice', coachVoice); } catch {}
 });
 
 window.addEventListener('pagehide', cancelXiezhiAssistant);
