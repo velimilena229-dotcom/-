@@ -283,3 +283,35 @@ body[data-route="xiezhi"] #app { animation: none; }
  .debate-card-controls,.debate-drawing-control { height: 130px; min-height: 130px; }
  .debate-question-copy > p { height: 56px; min-height: 56px; }
 }
+
+/* 开场由观众点击结束。 */
+.opening:not([open]) { display: none; }
+.opening[open] { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 24px; border: 0; cursor: pointer; }
+.opening.play { opacity: 1; animation: none; transition: opacity .36s ease; }
+.opening.leave { opacity: 0; }
+.opening-enter { justify-self: center; margin-top: 24px; padding: 8px 16px; color: #fff5df; border: 1px solid #fff5df66; border-radius: 24px; background: #52201f38; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .opening-mark span, .opening p { opacity: 1; transform: none; animation: none; }
+  .opening-mark i { height: 52px; animation: none; }
+}
+
+/* 一张桌面容纳牌堆、操作和章节入口。 */
+.concept-game { grid-template-columns: minmax(0,1fr); min-height: 0; max-width: 950px; margin: 0 auto; padding: clamp(14px,2vw,25px); color: #fcf4df; background: radial-gradient(ellipse at center,#45645a,#223d36 78%); border: 1px solid #9b845c; box-shadow: inset 0 0 0 5px #cdb28024,0 16px 35px #2c40332e; }
+.concept-game-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 0 12px; border-bottom: 1px solid #e9d8ad55; }
+.concept-game-head h1 { margin: 0; font: 700 clamp(24px,3vw,36px)/1.2 var(--serif); }
+.concept-game-head p { margin: 5px 0 0; font-size: 13px; }
+.concept-game-head > span { color: #ecd4a2; flex: none; font-size: 12px; }
+.concept-game .concept-table { padding: 18px 10px 6px; gap: 12px; background-size: auto 95%; }
+.concept-game .concept-stack { height: clamp(340px,50svh,420px); width: min(100%,330px); }
+.concept-game .concept-table-caption { color: #f4e5c5; min-height: 21px; }
+.concept-game-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+.concept-game-actions a { padding: 8px; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
+.concept-game-actions .training-secondary { background: #faf2dc; color: #553729; }
+.concept-game-actions .training-button { background: #8e3535; border-color: #e0ad77; }
+@media (max-width: 480px) {
+  .concept-game-head > span { font-size: 10px; }
+  .concept-game .concept-stack { height: 350px; width: min(100%,270px); }
+  .concept-game-actions > * { font-size: 12px; padding-inline: 8px; }
+}
+.coach-reply-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.concept-game .concept-back { color: #302620; }

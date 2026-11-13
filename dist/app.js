@@ -589,7 +589,7 @@ function finalPracticeSummary() {
 
 function renderFinalPractice() {
   const summary = finalPracticeSummary();
-  app.innerHTML = `<section class="final-practice-page">${locationBar('#learn', '返回用原理看现实', [{ label: '首页', href: '#home' }, { label: LEARN_NAME, href: '#learn' }, { label: QUIZ_NAME }])}
+  app.innerHTML = `<section class="final-practice-page">${locationBar('#learn', '返回用原理观现实', [{ label: '首页', href: '#home' }, { label: LEARN_NAME, href: '#learn' }, { label: QUIZ_NAME }])}
     <header class="practice-dashboard-head"><small>原理理解 · 实践判断</small><h1>${QUIZ_NAME}</h1><p>每五题为一节，提交后自动生成逐题分析，并把答错题目写入本机错题本。</p></header>
     <div class="practice-progress"><div><span>当前进度</span><b>${summary.answered}<small> / ${summary.total}</small></b></div><div class="practice-progress-line"><i style="width:${summary.progress}%"></i></div><p>已完成 ${summary.progress}% · ${summary.pendingWrong ? `${summary.pendingWrong} 道仍需订正` : '当前没有待订正错题'}</p></div>
     <div class="practice-entry-grid">
@@ -634,7 +634,7 @@ function quizSource(kind, key) {
   }
   const importedFinalBank = finalExamBank();
   const questions = key === '期末' && importedFinalBank.length ? importedFinalBank : SITE_DATA.questions.filter(question => question.track === key);
-  return { label: key === '考研' ? '考研模拟练习' : key === '公考' ? '考公模拟练习' : QUIZ_NAME, backHref: key === '期末' ? '#final-practice' : '#learn', backLabel: key === '期末' ? '返回练习中心' : '返回用原理看现实', questions };
+  return { label: key === '考研' ? '考研模拟练习' : key === '公考' ? '考公模拟练习' : QUIZ_NAME, backHref: key === '期末' ? '#final-practice' : '#learn', backLabel: key === '期末' ? '返回练习中心' : '返回用原理观现实', questions };
 }
 
 function startQuiz(kind, rawKey, rawBatch = '0', rawQuestion) {
@@ -927,11 +927,15 @@ function runOpening() {
   const opening = document.querySelector('#opening');
   let alreadySeen = false;
   try { alreadySeen = sessionStorage.getItem('mingli-opening-v4') === '1'; } catch (_) {}
-  if (alreadySeen) { opening.remove(); return; }
+  if (alreadySeen || (location.hash && location.hash !== '#home')) { opening.remove(); return; }
+  opening.showModal();
   opening.classList.add('play');
-  try { sessionStorage.setItem('mingli-opening-v4', '1'); } catch (_) {}
-  setTimeout(() => opening.classList.add('leave'), 2900);
-  setTimeout(() => opening.remove(), 3900);
+  opening.addEventListener('cancel', event => event.preventDefault());
+  opening.addEventListener('click', () => {
+    try { sessionStorage.setItem('mingli-opening-v4', '1'); } catch (_) {}
+    opening.classList.add('leave');
+    setTimeout(() => opening.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 360);
+  }, { once: true });
 }
 
 document.addEventListener('click', event => {

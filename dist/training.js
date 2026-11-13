@@ -1,7 +1,11 @@
 const LAB_NAME = '青年思辨训练场';
-const LEARN_NAME = '用原理看现实';
+const LEARN_NAME = '用原理观现实';
 const NEWS_NAME = '法治思想研读';
 const QUIZ_NAME = '原理应用自测';
+
+function casePhoto(id, alt) {
+  return `<figure class="training-photo"><img src="./assets/case-${id}.jpg" alt="${esc(alt)}" decoding="async" loading="lazy"></figure>`;
+}
 
 function trainingPhoto(key, className = '') {
   const photo = TRAINING_PHOTOS[key];
@@ -23,7 +27,7 @@ function renderTrainingHome() {
     </div>
     <div class="home-choices home-secondary-choices">
       <a class="home-choice lab-choice" href="#lab" data-lab-entry><img class="choice-art library-home-art" src="./assets/home-library-lineart-v1.jpg" alt="" aria-hidden="true"><div class="choice-copy"><small>现实议题与公共表达</small><h2>青年思辨训练场</h2><p>真实案例 · 问思训练 · 今日一辩</p></div><span>进入训练场 →</span></a>
-      <a class="home-choice learn-choice" href="#learn"><img class="choice-art" src="./assets/home-marx-engels-lineart-v1.jpg" alt="" aria-hidden="true"><div class="choice-copy"><small>原理理解与现实应用</small><h2>用原理看现实</h2><p>知行图谱 · 概念卡牌 · 原理自测</p></div><span>进入学习 →</span></a>
+      <a class="home-choice learn-choice" href="#learn"><img class="choice-art" src="./assets/home-marx-engels-lineart-v1.jpg" alt="" aria-hidden="true"><div class="choice-copy"><small>原理理解与现实应用</small><h2>用原理观现实</h2><p>知行图谱 · 概念卡牌 · 原理自测</p></div><span>进入学习 →</span></a>
     </div>
   </section>`;
   document.title = '明理·法观';
@@ -55,7 +59,7 @@ function renderTrainingPractice() {
     <header class="training-heading"><h1>法治实践</h1><p>先带着问题看事实，再练习判断规则如何适用。结尾可以核对官方处理结果。</p></header>
     ${topics.map(topic => `<section class="practice-theme"><h2>${esc(topic)}</h2><div class="practice-case-grid">${SITE_DATA.cases.filter(item => item.topic === topic).map(item => {
       const [photo, question] = CASE_TRAINING[item.id];
-      return `<article class="practice-case-entry">${trainingPhoto(photo)}<div><small>${esc(item.org)} · ${esc(item.year)}</small><h3><a href="#case/${item.id}">${esc(item.title)}</a></h3><p>${esc(question)}</p><a class="training-text-link" href="#case/${item.id}">打开案卷 ↗</a></div></article>`;
+      return `<article class="practice-case-entry">${casePhoto(item.id, photo)}<div><small>${esc(item.org)} · ${esc(item.year)}</small><h3><a href="#case/${item.id}">${esc(item.title)}</a></h3><p>${esc(question)}</p><a class="training-text-link" href="#case/${item.id}">打开案卷 ↗</a></div></article>`;
     }).join('')}</div></section>`).join('')}
   </section>`;
   document.title = '法治实践｜明理·法观';
@@ -77,7 +81,7 @@ function renderTrainingCase(id) {
         <section id="case-reasoning" hidden tabindex="-1"><p class="training-kicker">本站教学分析</p><h2>把事实和规则连起来</h2><div class="case-method-grid">${detail.method.map(([name, copy]) => `<article><h3>${esc(name)}</h3><p>${esc(copy)}</p></article>`).join('')}</div><p>${esc(item.thought)}</p><details><summary>${esc(detail.prompt)}</summary><p>${esc(detail.answerPoints)}</p></details><button class="training-secondary" type="button" data-case-step="case-outcome">核对官方结论 ↓</button></section>
         <section id="case-outcome" hidden tabindex="-1"><p class="training-kicker">官方处理 · 本站摘要</p><h2>核对最终结论</h2><p>${esc(detail.officialResult)}</p><p>${esc(detail.officialMeaning)}</p><div class="case-end-links"><a class="training-text-link" href="${item.source}" target="_blank" rel="noopener noreferrer">阅读权威原文 ↗</a><a class="training-text-link" href="#case/${next.id}">查看下一案 →</a></div></section>
       </div>
-    </div><aside class="case-photo-side">${trainingPhoto(photo)}<p>${esc(detail.officialType)} · <a href="${item.source}" target="_blank" rel="noopener noreferrer">核查官方出处 ↗</a></p></aside></div>
+    </div><aside class="case-photo-side">${casePhoto(id, photo)}<p>场景实拍，非案发现场。</p><p>${esc(detail.officialType)} · <a href="${item.source}" target="_blank" rel="noopener noreferrer">核查官方出处 ↗</a></p></aside></div>
   </section>`;
   document.querySelector('[data-case-open]').addEventListener('click', event => {
     const reveal = document.querySelector('.case-reveal');
@@ -100,9 +104,12 @@ let conceptDrawTimer = null;
 function conceptCards() { return CONCEPT_TERMS; }
 function renderConcepts() {
   const cards = conceptCards();
-  app.innerHTML = `<section class="training-wrap concept-page">${locationBar('#learn','返回用原理看现实',trainingCrumbs('马原概念卡',LEARN_NAME,'#learn'))}
-  <div class="concept-board"><aside class="concept-controls"><p class="training-kicker">概念不是答案，是思考的工具</p><h1>马原概念卡</h1><p>先试着解释，再翻面核对。<br>从一个概念，想到一件现实中的事。</p><div class="concept-practice-steps"><span><b>01</b> 抽取一个概念</span><span><b>02</b> 用自己的话解释</span><span><b>03</b> 翻牌，核对与应用</span></div><button class="training-button" type="button" data-concept-draw>抽一张卡</button><button class="training-secondary" type="button" data-concept-directory>打开概念目录 ↗</button><small>导论及七章 · ${cards.length} 个核心术语<br>释义为教材语境下的编辑概括。</small><a class="training-text-link" href="#map">返回章节图谱 →</a></aside>
-  <div class="concept-table"><div class="concept-stack" data-concept-stack><div class="concept-turner"><button type="button" class="concept-face concept-front" data-concept-flip><span data-concept-chapter>明理 · 法观</span><small data-concept-question>从一个概念开始</small><b data-concept-title>思考，自有其理</b><p>先想一想，你会怎样解释？</p><em>点击抽牌</em></button><section class="concept-face concept-back" aria-hidden="true" inert><span>教材语境 · 本站概括</span><div class="concept-definition" data-concept-definition></div><button type="button" data-concept-unflip>翻回问题 ↻</button></section></div></div><p class="concept-table-caption" aria-live="polite" data-concept-caption>不急着翻面，先在心里说出你的理解。</p></div></div>
+  app.innerHTML = `<section class="training-wrap concept-page">${locationBar('#learn','返回用原理观现实',trainingCrumbs('马原概念卡',LEARN_NAME,'#learn'))}
+  <div class="concept-board concept-game">
+    <header class="concept-game-head"><div><h1>马原概念卡</h1><p>抽一张卡，先用自己的话解释，再翻牌核对。</p></div><span>${cards.length} 张 · 导论及七章</span></header>
+    <div class="concept-table"><div class="concept-stack" data-concept-stack><div class="concept-turner"><button type="button" class="concept-face concept-front" data-concept-flip><span data-concept-chapter>明理 · 法观</span><small data-concept-question>从一个概念开始</small><b data-concept-title>思考，自有其理</b><p>先想一想，你会怎样解释？</p><em>点击抽牌</em></button><section class="concept-face concept-back" aria-hidden="true" inert><span>教材语境 · 本站概括</span><div class="concept-definition" data-concept-definition></div><button type="button" data-concept-unflip>翻回问题 ↻</button></section></div></div><p class="concept-table-caption" aria-live="polite" data-concept-caption>点击牌面开始，也可以从目录选卡。</p></div>
+    <footer class="concept-game-actions"><a href="#map">章节图谱</a><button class="training-button" type="button" data-concept-draw>抽一张卡</button><button class="training-secondary" type="button" data-concept-directory>打开概念目录</button></footer>
+  </div>
   <dialog class="concept-directory lexicon-dialog" aria-label="马原概念目录"><div class="lexicon-sheet"><header><div><small>按章节查找</small><h2>概念目录</h2></div><button type="button" data-concept-close aria-label="关闭概念目录">×</button></header><label class="lexicon-search">检索概念<input type="search" data-concept-search placeholder="例如：形而上学"></label><div class="concept-directory-list">${SITE_DATA.chapters.map(ch=>`<section><h3>${esc(ch.no)} · ${esc(ch.title)}</h3><div>${cards.map((c,i)=>c.chapter===ch.id?`<button type="button" data-concept-select="${i}" data-title="${esc(c.title)}">${esc(c.title)}</button>`:'').join('')}</div></section>`).join('')}</div></div></dialog></section>`;
   const stack = document.querySelector('[data-concept-stack]');
   const front = stack.querySelector('.concept-front'), back=stack.querySelector('.concept-back');

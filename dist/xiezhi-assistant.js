@@ -6,7 +6,7 @@ function xiezhiAssistantMarkup() {
     <button class="coach-mobile-open" type="button" data-coach-open>请獬豸帮忙 <span>语音陪练 ↗</span></button>
     <div class="coach-body" role="region" aria-label="獬豸语音陪练">
       <header><div><p class="training-kicker">先自己想，再一起改</p><h2>请獬豸帮忙</h2></div><div class="coach-header-actions"><button type="button" data-coach-mute aria-pressed="${coachMuted}">${coachMuted ? '已静音' : '朗读开启'}</button><button type="button" data-coach-close aria-label="关闭语音陪练">×</button></div></header>
-      <div class="coach-scroll"><p class="coach-intro">查阅后，试着用自己的话讲清词义。獬豸会从用词、结构和表达三个方面给出建议。</p>
+      <div class="coach-scroll"><p class="coach-intro">查阅后，试着用自己的话讲清词义。也可以直接说出其他问题，獬豸会按你实际说的内容回应。</p>
         <div class="coach-output" data-coach-output hidden></div>
         <div class="coach-empty" data-coach-empty><span aria-hidden="true">言</span><b>思考由你开始</b><p>说出你的理解、一个例子，<br>以及它为什么与你有关。</p></div>
       </div>
@@ -69,7 +69,7 @@ async function startXiezhiAssistant() {
   try {
     const response = await fetch('/api/coach/status', { signal: session.controller.signal, cache: 'no-store' });
     const { ready } = response.ok ? await response.json() : {};
-    if (!ready) throw new Error('本地模型密钥尚未配置。请从「启动语音陪练.command」启动，或先查看演示反馈。');
+    if (!ready) throw new Error('语音陪练服务尚未配置。你可以先查看演示反馈。');
     coachStatus('请允许浏览器使用麦克风。');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 }, video: false });
     if (coachSession !== session) {
@@ -116,6 +116,45 @@ function finishXiezhiSpeaking() {
   updateXiezhiPanel();
 }
 
+async function prepareCoachAudio(blob) {
+  const audioContext = new AudioContext();
+  try {
+    const decoded = await audioContext.decodeAudioData(await blob.arrayBuffer());
+    const sampleRate = 16000;
+    const frames = Math.max(1, Math.ceil(Math.min(decoded.duration, 180) * sampleRate));
+    const offline = new OfflineAudioContext(1, frames, sampleRate);
+    const source = offline.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offline.destination);
+    source.start();
+    const samples = (await offline.startRendering()).getChannelData(0);
+    const buffer = new ArrayBuffer(44 + frames * 2);
+    const view = new DataView(buffer);
+    const writeText = (offset, text) => {
+      for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+    };
+    writeText(0, 'RIFF');
+    view.setUint32(4, buffer.byteLength - 8, true);
+    writeText(8, 'WAVE');
+    writeText(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeText(36, 'data');
+    view.setUint32(40, frames * 2, true);
+    for (let i = 0; i < frames; i++) {
+      view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 32767, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  } finally {
+    await audioContext.close();
+  }
+}
+
 async function submitXiezhiRecording(session) {
   releaseCoachMedia(session);
   if (coachSession !== session) return;
@@ -127,10 +166,12 @@ async function submitXiezhiRecording(session) {
     coachStatus('没有录到声音，可以重新录制。');
     return;
   }
-  coachStatus('正在转写录音并整理表达建议…');
+  coachStatus('正在转写录音并生成回复…');
   try {
+    const audio = await prepareCoachAudio(blob);
+    if (coachSession !== session) return;
     const form = new FormData();
-    form.append('audio', blob, 'practice');
+    form.append('audio', audio, 'practice.wav');
     form.append('term', session.term);
     const response = await fetch('/api/coach', { method: 'POST', body: form, signal: session.controller.signal });
     const result = await response.json();
@@ -169,9 +210,11 @@ function showXiezhiFeedback(result, example) {
   output.hidden = false;
   document.querySelector('[data-coach-empty]').hidden = true;
   document.querySelector('.coach-scroll').scrollTop = 0;
-  const fields = [['术语与用词', result.wording], ['表达结构', result.structure], ['下一轮怎么练', result.nextStep]];
-  output.dataset.speech = fields.map(([name, copy]) => name + '。' + copy).join('。');
-  output.innerHTML = `<p class="training-kicker">${example ? '演示样例 · 编辑预设' : '獬豸反馈 · AI 生成'}</p><details><summary>查看${example ? '样例' : '语音'}转写</summary><p>${esc(result.transcript)}</p></details><div class="coach-feedback-grid">${fields.map(([name, copy]) => `<div><b>${name}</b><p>${esc(copy)}</p></div>`).join('')}</div><button class="training-secondary" type="button" data-coach-play>朗读这份建议</button>`;
+  const fields = result.reply
+    ? [['獬豸回复', result.reply]]
+    : [['术语与用词', result.wording], ['表达结构', result.structure], ['下一轮怎么练', result.nextStep]];
+  output.dataset.speech = result.reply || fields.map(([name, copy]) => name + '。' + copy).join('。');
+  output.innerHTML = `<p class="training-kicker">${example ? '演示样例 · 编辑预设' : '獬豸反馈 · AI 生成'}</p><details><summary>查看${example ? '样例' : '语音'}转写</summary><p>${esc(result.transcript)}</p></details><div class="coach-feedback-grid">${fields.map(([name, copy]) => `<div><b>${name}</b><p class="coach-reply-text">${esc(copy)}</p></div>`).join('')}</div><button class="training-secondary" type="button" data-coach-play>朗读回复</button>`;
   speakCoachFeedback(output);
 }
 
