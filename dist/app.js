@@ -387,12 +387,13 @@ function renderXiezhi() {
   const termSize = termSizeClass(x.term);
   app.innerHTML = `<section class="xiezhi-page">${locationBar('#lab', '返回训练场', [{ label: '首页', href: '#home' }, { label: LAB_NAME, href: '#lab' }, { label: '獬豸问思局' }])}
     <div class="xiezhi-shell"><div class="xiezhi-visual"><img src="./assets/xiezhi-asset-v1.png" alt="獬豸主题线描形象"><span>辨曲直 · 求真知</span></div>
-    <div class="xiezhi-workbench"><header><small>獬豸问思局</small><h1>抽一词，查一事，讲清一个判断</h1></header>
+    <div class="xiezhi-workbench"><header><div class="xiezhi-welcome-heading"><small>獬豸问思局</small><button type="button" data-xiezhi-welcome>播放欢迎语</button></div><h1>抽一词，查一事，讲清一个判断</h1></header>
     <div class="term-draw ${hasTerm ? 'has-term is-revealed' : ''}"><div class="term-draw-frame"><button type="button" class="term-vault-trigger" data-open-lexicon aria-label="查看全部问思词条" title="查看全部词条"><span aria-hidden="true">录</span></button><small>${hasTerm ? `第 ${String(x.termIndex + 1).padStart(2, '0')} 号签` : '獬豸待命'}</small><strong data-term-display class="${termSize}">${hasTerm ? esc(x.term) : '待抽取'}</strong><span>${hasTerm ? '查其出处 · 述其要义' : '以问求思 · 以理辨事'}</span></div><div class="draw-action"><button class="draw-seal" data-draw-term aria-label="${hasTerm ? '换一个词条' : '抽取今日词条'}"><em aria-hidden="true">獬</em><b>${hasTerm ? '再抽一签' : '启签问思'}</b></button></div></div>
     ${xiezhiClockMarkup(x)}
     <p class="xiezhi-note"><b>练习方法：</b>在抽取词条后，利用10分钟自行查阅资料了解词条含义，再脱稿口述3分钟（可录视频自查表达，在了解词义的同时提升自己的表达能力）。</p></div>${xiezhiAssistantMarkup()}</div>
     <dialog class="lexicon-dialog" aria-label="问思词库"><div class="lexicon-sheet"><header><div><small>獬豸问思局 · 词库</small><h2>翻阅全部词条</h2><p>选一个词，自行核查权威出处，再用三分钟讲清概念与现实联系。</p></div><button type="button" data-close-lexicon aria-label="关闭词库">×</button></header><label class="lexicon-search">检索词条<input type="search" data-lexicon-search placeholder="输入关键词"></label><div class="lexicon-grid">${XIEZHI_TERMS.map((term, index) => `<span data-lexicon-term="${esc(term)}"><i>${String(index + 1).padStart(2, '0')}</i>${esc(term)}</span>`).join('')}</div></div></dialog></section>`;
   updateXiezhiPanel();
+  syncXiezhiWelcome();
   if (x.running) runXiezhiTimer();
   document.title = '獬豸问思局｜明理·法观';
 }
@@ -882,6 +883,7 @@ function route(animateFallback = false) {
   const hash = location.hash.replace(/^#/, '') || 'home';
   const [root, ...parts] = hash.split('/');
   if (root !== 'xiezhi') {
+    stopXiezhiWelcome();
     cancelXiezhiAssistant();
     if (state.xiezhi.phase === 'speaking') { state.xiezhi.phase = 'ready'; state.xiezhi.remaining = 180; }
     stopXiezhiTimer();
@@ -954,6 +956,7 @@ document.addEventListener('click', event => {
     event.preventDefault();
     if (labCardNavigating) return;
     labCardNavigating = true;
+    if (labCard.getAttribute('href') === '#xiezhi') playXiezhiWelcome();
     document.querySelector('.lab-hub')?.classList.add('is-exiting');
     setTimeout(() => { location.hash = labCard.getAttribute('href'); labCardNavigating = false; }, 105);
     return;

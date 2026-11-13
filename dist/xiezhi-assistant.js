@@ -1,6 +1,40 @@
 let coachSession = null;
 let coachMuted = true;
 let coachPlayback = null;
+const xiezhiWelcome = new Audio('./assets/xiezhi-welcome-momo-v1.m4a');
+xiezhiWelcome.preload = 'none';
+
+function syncXiezhiWelcome() {
+  const button = document.querySelector('[data-xiezhi-welcome]');
+  if (button) button.textContent = xiezhiWelcome.paused || xiezhiWelcome.ended ? '播放欢迎语' : '停止欢迎语';
+}
+
+function stopXiezhiWelcome() {
+  xiezhiWelcome.pause();
+  xiezhiWelcome.currentTime = 0;
+  syncXiezhiWelcome();
+}
+
+function playXiezhiWelcome() {
+  xiezhiWelcome.currentTime = 0;
+  xiezhiWelcome.play().then(syncXiezhiWelcome, syncXiezhiWelcome);
+  syncXiezhiWelcome();
+}
+
+for (const event of ['play', 'pause', 'ended']) {
+  xiezhiWelcome.addEventListener(event, syncXiezhiWelcome);
+}
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('[data-xiezhi-welcome]')) return;
+  if (xiezhiWelcome.paused || xiezhiWelcome.ended) {
+    if (coachSession?.recorder?.state === 'recording') return;
+    stopCoachVoice();
+    playXiezhiWelcome();
+  } else {
+    stopXiezhiWelcome();
+  }
+});
 
 
 function xiezhiAssistantMarkup() {
@@ -63,6 +97,7 @@ function cancelXiezhiAssistant() {
 
 async function startXiezhiAssistant() {
   if (coachSession || !['ready', 'done'].includes(state.xiezhi.phase)) return;
+  stopXiezhiWelcome();
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || location.protocol === 'file:') {
     coachStatus('请通过本地预览网址用支持麦克风的浏览器打开，也可以先查看演示反馈。');
     return;
@@ -218,6 +253,7 @@ function coachVoiceStatus(message) {
 async function playCoachVoice(text) {
   if (!text || coachSession?.recorder?.state === 'recording') return;
   stopCoachVoice();
+  stopXiezhiWelcome();
   coachVoiceStatus('');
   const playback = { controller: new AbortController(), player: document.querySelector('[data-coach-audio]') };
   coachPlayback = playback;

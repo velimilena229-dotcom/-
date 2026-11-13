@@ -316,4 +316,6 @@ body[data-route="xiezhi"] #app { animation: none; }
 .coach-reply-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .coach-scroll [data-coach-audio] { width: 100%; height: 35px; margin: 4px 0; }
 .coach-voice-status { margin: 5px 0; color: #873736; font-size: 12px; }
+.xiezhi-welcome-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+[data-xiezhi-welcome] { color: #873736; background: transparent; border: 1px solid #cbb79f; border-radius: 3px; padding: 3px 8px; font-size: 11px; white-space: nowrap; }
 .concept-game .concept-back { color: #302620; }

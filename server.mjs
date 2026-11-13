@@ -8,7 +8,7 @@ import { coachReady, handleCoach } from './dist/_worker.js';
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const port = Number(process.env.MINGLI_PORT || 4187);
 const origin = 'http://127.0.0.1:' + port;
-const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.png': 'image/png' };
+const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.png': 'image/png', '.m4a': 'audio/mp4' };
 let active = false;
 let requests = 0;
 
