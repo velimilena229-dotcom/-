@@ -324,10 +324,9 @@ body[data-route="xiezhi"] #app { animation: none; }
 .plenum-series-intro p { margin: 0; color: #6c5345; }
 .plenum-series-intro p:first-child { color: #8b3f39; font-size: 12px; }
 .plenum-series-intro h1 { margin: 4px 0 6px; font: 700 clamp(23px, 3vw, 34px)/1.35 var(--serif); }
-.theory-list .plenum-featured-row { grid-column: 1 / -1; border-color: #be9780; background: #f7eee1; }
 .reading-material .plenum-photo img { height: auto; max-height: 460px; width: 100%; object-fit: contain; background: #efe6d8; }
 .plenum-reading-steps { padding-left: 1.4em; }
 .plenum-reading-steps li { margin-bottom: 12px; }
 .plenum-reading-steps p { margin: 4px 0 0; }
-.plenum-related { padding-left: 1.4em; }
-.plenum-related a { color: #873736; text-decoration: underline; }
+.reading-compass li a, .plenum-reading-steps li a { display: inline-block; margin-top: 4px; color: #813536; font-size: .85em; text-decoration: underline; text-underline-offset: 3px; }
+.reading-analysis .plenum-reading-steps li { margin-bottom: 18px; }
