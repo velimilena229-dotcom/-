@@ -319,3 +319,15 @@ body[data-route="xiezhi"] #app { animation: none; }
 .xiezhi-welcome-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 [data-xiezhi-welcome] { color: #873736; background: transparent; border: 1px solid #cbb79f; border-radius: 3px; padding: 3px 8px; font-size: 11px; white-space: nowrap; }
 .concept-game .concept-back { color: #302620; }
+
+.plenum-series-intro { padding: clamp(18px, 2.5vw, 30px); margin-bottom: 12px; background: #f8f3e9; border: 1px solid #d6c1a9; border-left: 3px solid #893d36; }
+.plenum-series-intro p { margin: 0; color: #6c5345; }
+.plenum-series-intro p:first-child { color: #8b3f39; font-size: 12px; }
+.plenum-series-intro h1 { margin: 4px 0 6px; font: 700 clamp(23px, 3vw, 34px)/1.35 var(--serif); }
+.theory-list .plenum-featured-row { grid-column: 1 / -1; border-color: #be9780; background: #f7eee1; }
+.reading-material .plenum-photo img { height: auto; max-height: 460px; width: 100%; object-fit: contain; background: #efe6d8; }
+.plenum-reading-steps { padding-left: 1.4em; }
+.plenum-reading-steps li { margin-bottom: 12px; }
+.plenum-reading-steps p { margin: 4px 0 0; }
+.plenum-related { padding-left: 1.4em; }
+.plenum-related a { color: #873736; text-decoration: underline; }

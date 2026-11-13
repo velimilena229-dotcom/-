@@ -37,16 +37,27 @@ const READING_GUIDES = [
  ['legislation','公众意见怎样进入稳定的制度程序？','参与、表达、决策、监督各有哪些程序渠道？','听取意见和实际回应意见之间，还需要什么机制？','这篇理论文章围绕法治与全过程人民民主的联系展开。阅读时可重点追踪公众参与如何与制度程序、权利保障和治理效果连接。','不要只统计参与次数；进一步核对意见能否影响议程、获得说明与形成监督反馈。']
 ].map(([photo,focus,q2,q3,summary,method])=>({photo,focus,questions:[focus,q2,q3],summary,method}));
 
+function plenumReadingPhoto({ src, alt, credit, source }) {
+  return `<figure class="training-photo plenum-photo"><img src="${esc(src)}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer"><figcaption>${esc(alt)} · ${esc(credit)} · <a href="${esc(source)}" target="_blank" rel="noopener noreferrer">查看新华社原图图集 ↗</a></figcaption></figure>`;
+}
+
 function renderGuidedArticle(index) {
   index = Number(index);
   const article = THEORY_ARTICLES[index], guide = READING_GUIDES[index];
   if (!article || !guide) return renderTheory();
   theorySelectedIndex = index;
   const lens = THEORY_READING_LENSES[article.topic];
-  app.innerHTML = `<section class="theory-reading-page guided-reading">${locationBar('#theory','返回文章目录',trainingCrumbs('带着问题研读','法治思想研读','#theory'))}<div class="reading-layout">
+  const photo = typeof guide.photo === 'string' ? trainingPhoto(guide.photo) : plenumReadingPhoto(guide.photo);
+  const reading = guide.reading
+    ? `<ol class="plenum-reading-steps">${guide.reading.map(([label, note]) => `<li><b>${esc(label)}</b><p>${esc(note)}</p></li>`).join('')}</ol>`
+    : `<p>${esc(lens[0])}</p>`;
+  const furtherReading = guide.related
+    ? `<ul class="plenum-related">${guide.related.map(({ label, url }) => `<li><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a></li>`).join('')}</ul>`
+    : '';
+  app.innerHTML = `<section class="theory-reading-page guided-reading">${locationBar('#theory','返回文章目录',trainingCrumbs('带着问题研读','法治视角读新闻','#theory'))}<div class="reading-layout">
     <aside class="reading-compass"><small>阅读之前 · 先问三个问题</small><h2>先辨依据，<br>再作判断。</h2><ol>${guide.questions.map(q=>`<li>${esc(q)}</li>`).join('')}</ol><button type="button" class="training-button" data-guided-open>带着问题开始阅读 ↓</button></aside>
     <article class="reading-desk"><header><small>${esc(article.topic)} · ${article.date} · ${esc(article.sourceName)}</small><h1>${esc(article.title)}</h1><div class="reading-steps"><span>01 提出问题</span><span>02 核对材料</span><span>03 形成判断</span></div></header>
-      <div class="reading-material">${trainingPhoto(guide.photo)}<div data-guided-material hidden><small class="training-kicker">本站导读 · 非原文转载</small><h2>带着问题阅读</h2><p>${esc(guide.summary)}</p><p>${esc(lens[0])}</p><div class="reading-source-link"><a href="${article.url}" target="_blank" rel="noopener noreferrer">打开权威原文，核对论据 ↗</a><span>以原发布页面为准</span></div><p>${esc(lens[1])}</p>
+      <div class="reading-material">${photo}<div data-guided-material hidden><small class="training-kicker">本站导读 · 非原文转载</small><h2>带着问题阅读</h2><p>${esc(guide.summary)}</p>${reading}<div class="reading-source-link"><a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.featured ? "阅读《决定》原文 ↗" : "打开原文，核对依据 ↗"}</a><span>以原发布页面为准</span></div>${furtherReading}${lens ? `<p>${esc(lens[1])}</p>` : ''}
       <div class="reading-journal"><label for="reading-note">先留下自己的判断</label><textarea id="reading-note" maxlength="1200" placeholder="作者的判断是……依据是……我还想核实……"></textarea><button type="button" class="training-secondary" data-guided-analysis>看看分析思路 ↓</button><small>笔记仅保存在当前浏览器，分析思路由本站编辑编写。</small></div>
       <section class="reading-analysis" hidden><small class="training-kicker">本站教学分析 · 思考路径</small><h2>把结论背后的理由连起来</h2><p>${esc(guide.method)}</p><ol><li><b>区分材料性质：</b>事实描述、政策目标与作者判断分开记录。</li><li><b>检查推理连接：</b>指出哪条依据支持哪条结论，补出省略的条件。</li><li><b>给判断留边界：</b>用“在……条件下，依据……，可以判断……；仍需核实……”组织表达。</li></ol><p>再读一遍自己的笔记：有没有把计划当成结果，或把一个例子推成所有情况？</p></section></div></div>
     </article></div></section>`;
@@ -61,5 +72,5 @@ function renderGuidedArticle(index) {
     document.querySelector('.reading-analysis').hidden=false;
     e.currentTarget.textContent='分析思路已展开';
   });
-  document.title=article.title+'｜法治思想研读';
+  document.title=article.title+'｜法治视角读新闻';
 }

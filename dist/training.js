@@ -1,6 +1,6 @@
 const LAB_NAME = '青年思辨训练场';
 const LEARN_NAME = '用原理观现实';
-const NEWS_NAME = '法治思想研读';
+const NEWS_NAME = '法治视角读新闻';
 const QUIZ_NAME = '原理应用自测';
 
 function casePhoto(id, alt) {
@@ -22,7 +22,7 @@ function renderTrainingHome() {
     <div class="home-positioning"><span>面向重度依赖 AI 的青年人的自主思考训练平台</span><p>先独立思考，再借助工具。</p></div><div class="home-hero-group">
       <div class="home-heading home-statement"><h1><b>以原理观现实</b><i aria-hidden="true">·</i><b>以法治见真知</b></h1></div>
       <div class="home-theory-layer">
-        <a class="home-choice theory-choice" href="#theory" data-theory-entry><div class="choice-copy"><small>习近平法治思想 · 带着问题研读</small><h2>法治思想研读</h2><p>先提出问题，再核对材料，形成有依据的判断。</p></div><span>开启研读 <i aria-hidden="true">→</i></span></a>
+        <a class="home-choice theory-choice" href="#theory" data-theory-entry><div class="choice-copy"><small>新闻与政策 · 带着问题阅读</small><h2>法治视角读新闻</h2><p>先提出问题，再核对材料，形成有依据的判断。</p></div><span>进入阅读 <i aria-hidden="true">→</i></span></a>
       </div>
     </div>
     <div class="home-choices home-secondary-choices">

@@ -259,14 +259,14 @@ function renderDisclaimer() {
 }
 
 function renderTheory() {
-  const categories = ['全部', '思想要义', '立法与宪法', '法治实施', '数字与社会', '发展与安全'];
-  const filtered = theoryFilter === '全部' ? THEORY_ARTICLES : THEORY_ARTICLES.filter(article => article.topic === theoryFilter);
-  app.innerHTML = `<section class="theory-page">${locationBar('#home', '返回首页', [{ label: '首页', href: '#home' }, { label: '法治思想研读' }])}
-    <div class="theory-content"><div class="theory-filters" aria-label="文章主题筛选">${categories.map(category => `<button type="button" data-theory-filter="${category}" class="${theoryFilter === category ? 'active' : ''}" aria-pressed="${theoryFilter === category}">${category}</button>`).join('')}</div>
-    <div class="theory-list-meta"><span>${theoryFilter === '全部' ? '全部文章' : esc(theoryFilter)}</span><small>更新核对：${THEORY_UPDATED.replaceAll('-', '.')}</small></div>
-    <div class="theory-list">${filtered.map((article, index) => `<a href="#theory-article/${THEORY_ARTICLES.indexOf(article)}" data-theory-article="${THEORY_ARTICLES.indexOf(article)}" class="theory-row theory-article-link ${theorySelectedIndex === THEORY_ARTICLES.indexOf(article) ? 'is-selected' : ''}"><span>${String(index + 1).padStart(2, '0')}</span><div><small>${article.date}　·　${article.topic}</small><h3>${esc(article.title)}</h3><p>${esc(article.prompt)}</p></div><i>带着问题研读 ↗</i></a>`).join('')}</div>
-    <p class="theory-source">选编以 <a href="${THEORY_SOURCE}" target="_blank" rel="noopener noreferrer">中国法学会“习近平法治思想”专题 ↗</a> 等权威发布平台为索引，包含权威机构文章与学者研究阐释，并非全部为习近平总书记讲话原文。逐篇标明收录平台、日期与页面链接。本站仅提供原创导读，不转载全文；本页为 ${THEORY_UPDATED} 核对的静态快照，并非自动实时更新。</p></div></section>`;
-  document.title = '法治思想研读｜明理·法观';
+  const categories = ['全部', PLENUM_TOPIC, '思想要义', '立法与宪法', '法治实施', '数字与社会', '发展与安全'];
+  const filtered = theoryFilter === '全部' ? [...THEORY_ARTICLES.filter(article => article.topic === PLENUM_TOPIC), ...THEORY_ARTICLES.filter(article => article.topic !== PLENUM_TOPIC)] : THEORY_ARTICLES.filter(article => article.topic === theoryFilter);
+  app.innerHTML = `<section class="theory-page">${locationBar('#home', '返回首页', [{ label: '首页', href: '#home' }, { label: '法治视角读新闻' }])}
+    <div class="theory-content"><div class="plenum-series-intro"><p>专题学习</p><h1>党的二十届五中全会</h1><p>从全会公报、《决定》与发布会解读出发，练习区分会议事实、制度部署与落实证据。</p></div><div class="theory-filters" aria-label="文章主题筛选">${categories.map(category => `<button type="button" data-theory-filter="${category}" class="${theoryFilter === category ? 'active' : ''}" aria-pressed="${theoryFilter === category}">${category}</button>`).join('')}</div>
+    <div class="theory-list-meta"><span>${theoryFilter === '全部' ? '全部文章' : esc(theoryFilter)}</span><small>更新核对：${(theoryFilter === '全部' || theoryFilter === PLENUM_TOPIC ? PLENUM_LESSONS.at(-1).date : THEORY_UPDATED).replaceAll('-', '.')}</small></div>
+    <div class="theory-list">${filtered.map((article, index) => `<a href="#theory-article/${THEORY_ARTICLES.indexOf(article)}" data-theory-article="${THEORY_ARTICLES.indexOf(article)}" class="theory-row theory-article-link ${article.featured ? 'plenum-featured-row' : ''} ${theorySelectedIndex === THEORY_ARTICLES.indexOf(article) ? 'is-selected' : ''}"><span>${String(index + 1).padStart(2, '0')}</span><div><small>${article.date}　·　${article.topic}${article.kind ? '　·　' + article.kind : ''}</small><h3>${esc(article.title)}</h3><p>${esc(article.prompt)}</p></div><i>带着问题研读 ↗</i></a>`).join('')}</div>
+    <p class="theory-source">五中全会专题依据新华社受权发布文件、新闻报道及人民日报相关文章编写。原有选读以 <a href="${THEORY_SOURCE}" target="_blank" rel="noopener noreferrer">中国法学会“习近平法治思想”专题 ↗</a> 等权威发布平台为索引，包含权威机构文章与学者研究阐释，并非全部为习近平总书记讲话原文。逐篇标明收录平台、日期与页面链接。本站仅提供原创导读，不转载全文；选编为人工更新。</p></div></section>`;
+  document.title = '法治视角读新闻｜明理·法观';
 }
 
 function renderTheoryArticle(index) {
@@ -274,14 +274,14 @@ function renderTheoryArticle(index) {
   if (!article) { renderTheory(); return; }
   theorySelectedIndex = Number(index);
   const lens = THEORY_READING_LENSES[article.topic] || THEORY_READING_LENSES['思想要义'];
-  app.innerHTML = `<section class="theory-reading-page">${locationBar('#theory', '返回文章目录', [{ label: '首页', href: '#home' }, { label: '法治思想研读', href: '#theory' }, { label: '阅读导读' }])}
+  app.innerHTML = `<section class="theory-reading-page">${locationBar('#theory', '返回文章目录', [{ label: '首页', href: '#home' }, { label: '法治视角读新闻', href: '#theory' }, { label: '阅读导读' }])}
     <article class="theory-reading"><header><small>${esc(article.topic)} <i>·</i> ${article.date} <i>·</i> ${esc(article.sourceName)}</small><h1>${esc(article.title)}</h1><p>本站原创导读 · 非官方原文</p></header>
     <div class="theory-reading-body"><section class="reading-lead"><span>从这个问题读起</span><h2>${esc(article.prompt)}</h2></section>
     <section class="reading-lens"><span>阅读线索</span><p>${esc(lens[0])}</p><p>${esc(lens[1])}</p></section>
     <section class="reading-method"><span>三步阅读法</span><ol><li><b>找问题</b>：圈出作者试图回答的现实或理论问题。</li><li><b>理关系</b>：标出核心概念、事实依据及其连接方式。</li><li><b>作判断</b>：结合一个具体情境，写下自己的解释并核对原文。</li></ol></section></div>
     <footer class="reading-source"><span>权威页面</span><p>发布平台：${esc(article.sourceName)}；页面日期：${article.date}。本站导读只用于学习导航，具体表述以原文为准。</p><div class="reading-source-actions"><a href="${article.url}" target="_blank" rel="noopener noreferrer">阅读原页面 ↗</a><button type="button" data-copy-theory-url="${article.url}">复制页面网址</button></div><input id="theory-source-url" aria-label="原文网址，可长按复制" readonly value="${article.url}"></footer>
     </article></section>`;
-  document.title = `${article.title}｜法治思想研读｜明理·法观`;
+  document.title = `${article.title}｜法治视角读新闻｜明理·法观`;
 }
 
 function formatTime(seconds) {
