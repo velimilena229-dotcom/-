@@ -179,7 +179,7 @@ async function handleVoice(request, env) {
     return await synthesizeDylan(text, env);
   } catch (error) {
     console.warn('Dylan TTS:', error.message);
-    return json({ error: '晓东音色暂时无法播放，可以重试或切换系统音色。' }, 502);
+    return json({ error: '晓东语音暂时无法播放，请稍后重试。' }, 502);
   }
 }
 

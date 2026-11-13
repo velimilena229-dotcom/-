@@ -1,9 +1,7 @@
 let coachSession = null;
 let coachMuted = true;
 let coachPlayback = null;
-let coachVoice = 'dylan';
-try { if (localStorage.getItem('mingli-coach-voice') === 'system') coachVoice = 'system'; } catch {}
-const COACH_VOICE_SAMPLE = '你好，我是獬豸。你先说说你的想法，我陪你一起理清楚。';
+
 
 function xiezhiAssistantMarkup() {
   return `<aside class="xiezhi-coach" data-xiezhi-coach>
@@ -11,10 +9,6 @@ function xiezhiAssistantMarkup() {
     <div class="coach-body" role="region" aria-label="獬豸语音陪练">
       <header><div><p class="training-kicker">先自己想，再一起改</p><h2>请獬豸帮忙</h2></div><div class="coach-header-actions"><button type="button" data-coach-mute aria-pressed="${coachMuted}">${coachMuted ? '已静音' : '朗读开启'}</button><button type="button" data-coach-close aria-label="关闭语音陪练">×</button></div></header>
       <div class="coach-scroll"><p class="coach-intro">查阅后，试着用自己的话讲清词义。也可以直接说出其他问题，獬豸会按你实际说的内容回应。</p>
-        <div class="coach-voice-options">
-          <label>朗读音色 <select data-coach-voice><option value="dylan" ${coachVoice === 'dylan' ? 'selected' : ''}>北京-晓东</option><option value="system" ${coachVoice === 'system' ? 'selected' : ''}>系统中文音色</option></select></label>
-          <button type="button" data-coach-sample>试听</button>
-        </div>
         <audio controls preload="none" data-coach-audio hidden aria-label="獬豸语音"></audio>
         <p class="coach-voice-status" data-coach-voice-status role="status" hidden></p>
         <div class="coach-output" data-coach-output hidden></div>
@@ -212,7 +206,6 @@ function stopCoachVoice() {
     playback.player.hidden = true;
     if (playback.url) URL.revokeObjectURL(playback.url);
   }
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
 
 function coachVoiceStatus(message) {
@@ -226,10 +219,6 @@ async function playCoachVoice(text) {
   if (!text || coachSession?.recorder?.state === 'recording') return;
   stopCoachVoice();
   coachVoiceStatus('');
-  if (coachVoice === 'system') {
-    playCoachSystemVoice(text);
-    return;
-  }
   const playback = { controller: new AbortController(), player: document.querySelector('[data-coach-audio]') };
   coachPlayback = playback;
   coachVoiceStatus('晓东正在准备语音…');
@@ -257,23 +246,6 @@ async function playCoachVoice(text) {
   }
 }
 
-function playCoachSystemVoice(text) {
-  if (!('speechSynthesis' in window)) {
-    coachVoiceStatus('当前浏览器不支持系统朗读。');
-    return;
-  }
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = 'zh-CN';
-  const voice = speechSynthesis.getVoices().find(item => item.localService && /^zh(?:[-_]|$)/i.test(item.lang));
-  if (!voice) {
-    coachVoiceStatus('当前浏览器没有可用的系统中文音色。');
-    return;
-  }
-  speech.voice = voice;
-  speech.rate = 0.95;
-  speechSynthesis.speak(speech);
-}
-
 function showXiezhiFeedback(result, example) {
   const output = document.querySelector('[data-coach-output]');
   if (!output) return;
@@ -295,7 +267,6 @@ document.addEventListener('click', event => {
   if (event.target.closest('[data-coach-open]')) { const dialog=section.querySelector('.coach-dialog'); dialog.append(section.querySelector('.coach-body')); section.classList.add('coach-open'); dialog.onclose=()=>{stopCoachVoice();coachVoiceStatus('');section.append(dialog.querySelector('.coach-body'));section.classList.remove('coach-open');}; dialog.showModal(); return; }
   if (event.target.closest('[data-coach-close]')) { section.querySelector('.coach-dialog').close(); return; }
   if (event.target.closest('[data-coach-start]')) startXiezhiAssistant();
-  if (event.target.closest('[data-coach-sample]')) playCoachVoice(COACH_VOICE_SAMPLE);
   if (event.target.closest('[data-coach-example]')) {
     coachStatus('展示预设样例。');
     showXiezhiFeedback({
@@ -318,14 +289,6 @@ document.addEventListener('click', event => {
     const output = section.querySelector('[data-coach-output]');
     if (!output.hidden) playCoachVoice(output.dataset.speech);
   }
-});
-
-document.addEventListener('change', event => {
-  if (!event.target.matches('[data-coach-voice]')) return;
-  coachVoice = event.target.value;
-  stopCoachVoice();
-  coachVoiceStatus('');
-  try { localStorage.setItem('mingli-coach-voice', coachVoice); } catch {}
 });
 
 window.addEventListener('pagehide', cancelXiezhiAssistant);
